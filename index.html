@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HOA Recall Notice Map</title>
+    <style>
+        #map {
+            height: 750px;
+            width: 100%;
+        }
+        #addressList {
+            margin-top: 20px;
+        }
+        #legend {
+            background: white;
+            padding: 10px;
+            margin-top: 10px;
+            border: 1px solid #ccc;
+        }
+    </style>
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCwA7JIyB2oL1gudakLBTBfixAUZ_L1VUE&libraries=drawing"></script>
+</head>
+<body>
+    <h1>HOA Recall Notice Map</h1>
+    <div id="map"></div>
+    <div id="legend">
+        <h3>Legend</h3>
+        <p><span style="color: yellow;">&#9679;</span> Yellow - Has recall sheet</p>
+        <p><span style="color: green;">&#9679;</span> Green - Signed recall sheet</p>
+        <p><span style="color: red;">&#9679;</span> Red - Declined recall</p>
+    </div>
+    <ul id="addressList"></ul>
+    <script>
+        let map;
+        const circles = []; // Array to keep track of all circles
+        const colors = ['yellow', 'green', 'red']; // Array of colors
+
+        function initMap() {
+            const neighborhoodBounds = {
+                north: 28.1080,
+                south: 28.0826,
+                east: -82.5189,
+                west: -82.5445,
+            };
+			
+			// Custom map style to hide business POIs
+			const mapStyle = [
+				{
+					featureType: "poi.business",
+					stylers: [{ visibility: "off" }]
+				},
+				{
+					featureType: "poi.place_of_worship",
+					stylers: [{ visibility: "off" }]
+				},
+				{
+					featureType: "poi.school",
+					stylers: [{ visibility: "off" }]
+				}
+			];
+
+            map = new google.maps.Map(document.getElementById("map"), {
+                center: { lat: 28.095147, lng: -82.531077 }, // Center of Country Place
+                zoom: 15,
+                restriction: {
+                    latLngBounds: neighborhoodBounds,
+                    strictBounds: true,
+                },
+				gestureHandling: 'greedy', // Allow all gestures
+				styles: mapStyle // Apply custom style to map
+            });
+
+            // Load the KML layer
+            const kmlLayer = new google.maps.KmlLayer({
+                url: 'https://raw.githubusercontent.com/Seanphelps1/Recall/refs/heads/main/Country%20Place.kml?v=1', // Use the correct KML URL
+                map: map,
+				clickable: false, // This ensures the KML layer doesn't intercept clicks
+            });
+
+            // Add click listener to the map
+            map.addListener("click", (event) => {
+                handleMapClick(event.latLng);
+			});
+			map.setOptions({disableDoubleClickZoom: true}); // Explicitly disable double-click zoom
+        }
+	
+        function handleMapClick(location) {
+            // Create a new circle with yellow as the initial color
+            const newCircle = new google.maps.Circle({
+                strokeColor: 'yellow',
+                strokeOpacity: 0.8,
+                strokeWeight: 2,
+                fillColor: 'yellow',
+                fillOpacity: 0.35,
+                map: map,
+                center: location,
+                radius: 10, // Adjust the radius as needed
+            });
+
+            // Add the new circle to the array
+            circles.push(newCircle);
+
+            // Initialize color index for the new circle
+            let colorIndex = 0; // 0 for yellow
+
+            // Add a click listener to the new circle
+            google.maps.event.addListener(newCircle, 'click', () => {
+                if (colorIndex === 0) {
+                    // Change from yellow to green on the first click
+                    colorIndex = 1; // Set to green
+                    newCircle.setOptions({
+                        fillColor: 'green',
+                        strokeColor: 'green',
+                    });
+                } else if (colorIndex === 1) {
+                    // Change from green to red on the second click
+                    colorIndex = 2; // Set to red
+                    newCircle.setOptions({
+                        fillColor: 'red',
+                        strokeColor: 'red',
+                    });
+                } else if (colorIndex === 2) {
+                    // Remove the circle on the third click
+                    newCircle.setMap(null); // Remove the circle
+                    circles.splice(circles.indexOf(newCircle), 1); // Remove from the array
+                }
+            });
+        }
+
+        window.onload = initMap;
+    </script>
+</body>
+</html>
