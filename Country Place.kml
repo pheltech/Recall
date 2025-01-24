@@ -2,42 +2,42 @@
 <kml xmlns="http://www.opengis.net/kml/2.2">
   <Document>
     <name>Country Place</name>
-    <Style id="poly-000000-1200-77-normal">
+    <Style id="poly-E65100-4401-0-normal">
       <LineStyle>
-        <color>ff000000</color>
-        <width>1.2</width>
+        <color>ff0051e6</color>
+        <width>4.401</width>
       </LineStyle>
       <PolyStyle>
-        <color>4d000000</color>
+        <color>000051e6</color>
         <fill>1</fill>
         <outline>1</outline>
       </PolyStyle>
     </Style>
-    <Style id="poly-000000-1200-77-highlight">
+    <Style id="poly-E65100-4401-0-highlight">
       <LineStyle>
-        <color>ff000000</color>
-        <width>1.8</width>
+        <color>ff0051e6</color>
+        <width>6.6015</width>
       </LineStyle>
       <PolyStyle>
-        <color>4d000000</color>
+        <color>000051e6</color>
         <fill>1</fill>
         <outline>1</outline>
       </PolyStyle>
     </Style>
-    <StyleMap id="poly-000000-1200-77">
+    <StyleMap id="poly-E65100-4401-0">
       <Pair>
         <key>normal</key>
-        <styleUrl>#poly-000000-1200-77-normal</styleUrl>
+        <styleUrl>#poly-E65100-4401-0-normal</styleUrl>
       </Pair>
       <Pair>
         <key>highlight</key>
-        <styleUrl>#poly-000000-1200-77-highlight</styleUrl>
+        <styleUrl>#poly-E65100-4401-0-highlight</styleUrl>
       </Pair>
     </StyleMap>
     <Placemark>
       <name>Country Place</name>
       <description>Neighborhood</description>
-      <styleUrl>#poly-000000-1200-77</styleUrl>
+      <styleUrl>#poly-E65100-4401-0</styleUrl>
       <Polygon>
         <outerBoundaryIs>
           <LinearRing>
