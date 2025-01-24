@@ -4,22 +4,22 @@
     <name>Country Place</name>
     <Style id="poly-E65100-4401-0-normal">
       <LineStyle>
-        <color>ff0051e6</color>
+        <color>ff0000ff</color> <!-- Red border -->
         <width>4.401</width>
       </LineStyle>
       <PolyStyle>
-        <color>000051e6</color>
+        <color>00000000</color> <!-- Fully transparent fill -->
         <fill>1</fill>
         <outline>1</outline>
       </PolyStyle>
     </Style>
     <Style id="poly-E65100-4401-0-highlight">
       <LineStyle>
-        <color>ff0051e6</color>
+        <color>ff0000ff</color> <!-- Red border -->
         <width>6.6015</width>
       </LineStyle>
       <PolyStyle>
-        <color>000051e6</color>
+        <color>00000000</color> <!-- Fully transparent fill -->
         <fill>1</fill>
         <outline>1</outline>
       </PolyStyle>
