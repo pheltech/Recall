@@ -31,104 +31,152 @@
         <p><span style="color: red;">&#9679;</span> Red - Declined recall</p>
     </div>
     <ul id="addressList"></ul>
-    <script>
-        let map;
-        const circles = []; // Array to keep track of all circles
-        const colors = ['yellow', 'green', 'red']; // Array of colors
-
-        function initMap() {
-            const neighborhoodBounds = {
-                north: 28.1080,
-                south: 28.0826,
-                east: -82.5189,
-                west: -82.5445,
-            };
-			
-			// Custom map style to hide business POIs
-			const mapStyle = [
-				{
-					featureType: "poi.business",
-					stylers: [{ visibility: "off" }]
-				},
-				{
-					featureType: "poi.place_of_worship",
-					stylers: [{ visibility: "off" }]
-				},
-				{
-					featureType: "poi.school",
-					stylers: [{ visibility: "off" }]
-				}
-			];
-
-            map = new google.maps.Map(document.getElementById("map"), {
-                center: { lat: 28.095147, lng: -82.531077 }, // Center of Country Place
-                zoom: 15,
-                restriction: {
-                    latLngBounds: neighborhoodBounds,
-                    strictBounds: true,
-                },
-				gestureHandling: 'greedy', // Allow all gestures
-				styles: mapStyle // Apply custom style to map
-            });
-
-            // Load the KML layer
-            const kmlLayer = new google.maps.KmlLayer({
-                url: 'https://raw.githubusercontent.com/Seanphelps1/Recall/refs/heads/main/Country%20Place.kml?v=1', // Use the correct KML URL
-                map: map,
-				clickable: false, // This ensures the KML layer doesn't intercept clicks
-            });
-
-            // Add click listener to the map
-            map.addListener("click", (event) => {
-                handleMapClick(event.latLng);
-			});
-			map.setOptions({disableDoubleClickZoom: true}); // Explicitly disable double-click zoom
-        }
 	
-        function handleMapClick(location) {
-            // Create a new circle with yellow as the initial color
-            const newCircle = new google.maps.Circle({
-                strokeColor: 'yellow',
-                strokeOpacity: 0.8,
-                strokeWeight: 2,
-                fillColor: 'yellow',
-                fillOpacity: 0.35,
-                map: map,
-                center: location,
-                radius: 10, // Adjust the radius as needed
-            });
+<script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-firestore.js"></script>
+<script>
+	  var firebaseConfig = {
+		  apiKey: "AIzaSyAiZBjOBSH4dFUgT-cxNgIUSSGNciLgMQY",
+		  authDomain: "country-place-recall.firebaseapp.com",
+		  projectId: "country-place-recall",
+		  storageBucket: "country-place-recall.appspot.com",
+		  messagingSenderId: "564193307037",
+		  appId: "1:564193307037:web:4264759528343009d4a774",
+		  measurementId: "G-QSL43X9B2J"
+	  };
+	  firebase.initializeApp(firebaseConfig);
+	  const db = firebase.firestore(); 
 
-            // Add the new circle to the array
-            circles.push(newCircle);
+    let map;
+    const circles = [];
+    const colors = ['yellow', 'green', 'red'];
 
-            // Initialize color index for the new circle
-            let colorIndex = 0; // 0 for yellow
+    function initMap() {
+        const neighborhoodBounds = {
+            north: 28.1080,
+            south: 28.0826,
+            east: -82.5189,
+            west: -82.5445,
+        };
 
-            // Add a click listener to the new circle
-            google.maps.event.addListener(newCircle, 'click', () => {
-                if (colorIndex === 0) {
-                    // Change from yellow to green on the first click
-                    colorIndex = 1; // Set to green
-                    newCircle.setOptions({
-                        fillColor: 'green',
-                        strokeColor: 'green',
-                    });
-                } else if (colorIndex === 1) {
-                    // Change from green to red on the second click
-                    colorIndex = 2; // Set to red
-                    newCircle.setOptions({
-                        fillColor: 'red',
-                        strokeColor: 'red',
-                    });
-                } else if (colorIndex === 2) {
-                    // Remove the circle on the third click
-                    newCircle.setMap(null); // Remove the circle
-                    circles.splice(circles.indexOf(newCircle), 1); // Remove from the array
-                }
-            });
-        }
+        const mapStyle = [
+            {
+                featureType: "poi.business",
+                stylers: [{ visibility: "off" }]
+            },
+            {
+                featureType: "poi.place_of_worship",
+                stylers: [{ visibility: "off" }]
+            },
+            {
+                featureType: "poi.school",
+                stylers: [{ visibility: "off" }]
+            }
+        ];
 
-        window.onload = initMap;
-    </script>
+        map = new google.maps.Map(document.getElementById("map"), {
+            center: { lat: 28.095147, lng: -82.531077 },
+            zoom: 15,
+            restriction: { latLngBounds: neighborhoodBounds, strictBounds: true },
+            gestureHandling: 'greedy',
+            styles: mapStyle
+        });
+
+        const kmlLayer = new google.maps.KmlLayer({
+            url: 'https://raw.githubusercontent.com/Seanphelps1/Recall/refs/heads/main/Country%20Place.kml?v=1',
+            map: map,
+            clickable: false
+        });
+
+        map.addListener("click", (event) => {
+            handleMapClick(event.latLng);
+        });
+
+        map.setOptions({ disableDoubleClickZoom: true });
+
+        fetchFirestoreData();
+    }
+
+	function fetchFirestoreData() {
+		db.collection('addresses').get().then((querySnapshot) => {
+			if (querySnapshot.empty) {
+				console.log('No matching documents.');
+				return;
+			}
+			
+			querySnapshot.forEach((doc) => {
+				const point = doc.data();
+				if (point.lat && point.lng) {
+					const latLng = new google.maps.LatLng(point.lat, point.lng);
+					const circle = createCircle(latLng, point.status || 'yellow');
+					circles.push(circle);
+				}
+			});
+			console.log('Firestore data successfully fetched and rendered on the map.');
+		}).catch(error => {
+			console.error('Error fetching Firestore data:', error);
+		});
+	}
+
+
+    function createCircle(location, color) {
+        const newCircle = new google.maps.Circle({
+            strokeColor: color,
+            strokeOpacity: 0.8,
+            strokeWeight: 2,
+            fillColor: color,
+            fillOpacity: 0.35,
+            map: map,
+            center: location,
+            radius: 10
+        });
+
+        let colorIndex = colors.indexOf(color);
+
+        newCircle.addListener('click', () => {
+            if (colorIndex === 2) {
+                newCircle.setMap(null);
+                circles.splice(circles.indexOf(newCircle), 1);
+            } else {
+                colorIndex++;
+                const newColor = colors[colorIndex];
+                newCircle.setOptions({ fillColor: newColor, strokeColor: newColor });
+            }
+
+            updateFirestoreData();
+        });
+
+        return newCircle;
+    }
+
+    function handleMapClick(location) {
+        const initialColor = 'yellow';
+        const newCircle = createCircle(location, initialColor);
+        circles.push(newCircle);
+        updateFirestoreData();
+    }
+	
+	
+	function updateFirestoreData() {
+		const batch = db.batch();
+		circles.forEach(circle => {
+			const docRef = db.collection('addresses')
+							 .doc(`${circle.getCenter().lat()}_${circle.getCenter().lng()}`); 
+			batch.set(docRef, {
+				lat: circle.getCenter().lat(),
+				lng: circle.getCenter().lng(),
+				status: circle.get('fillColor') // updated to proper access to color
+			});
+		});
+
+		batch.commit().then(() => {
+			console.log('Firestore data successfully updated.');
+		}).catch(error => {
+			console.error('Error updating Firestore data:', error);
+		});
+	}
+
+    window.onload = initMap;
+</script>
 </body>
 </html>
