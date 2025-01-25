@@ -35,13 +35,15 @@
 <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-firestore.js"></script>
 <script>
-        fetch('/getFirebaseConfig').then(response => response.json()).then(config => {
-          firebase.initializeApp(config);
-          const db = firebase.firestore();
-          initMap();
-        }).catch(error => {
-          console.error('Error fetching Firebase config:', error);
-        });
+	  var firebaseConfig = {
+		  apiKey: "AIzaSyAiZBjOBSH4dFUgT-cxNgIUSSGNciLgMQY",
+		  authDomain: "country-place-recall.firebaseapp.com",
+		  projectId: "country-place-recall",
+		  storageBucket: "country-place-recall.appspot.com",
+		  messagingSenderId: "564193307037",
+		  appId: "1:564193307037:web:4264759528343009d4a774",
+		  measurementId: "G-QSL43X9B2J"
+	  };
 	  firebase.initializeApp(firebaseConfig);
 	  const db = firebase.firestore(); 
 
