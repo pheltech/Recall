@@ -83,7 +83,7 @@
         });
 
         const kmlLayer = new google.maps.KmlLayer({
-            url: 'https://raw.githubusercontent.com/Seanphelps1/Recall/refs/heads/main/Country%20Place.kml?v=1',
+            url: 'https://raw.githubusercontent.com/pheltech/Recall/refs/heads/main/Country%20Place.kml?v=1',
             map: map,
             clickable: false
         });
@@ -133,18 +133,30 @@
 
         let colorIndex = colors.indexOf(color);
 
-        newCircle.addListener('click', () => {
-            if (colorIndex === 2) {
-                newCircle.setMap(null);
-                circles.splice(circles.indexOf(newCircle), 1);
-            } else {
-                colorIndex++;
-                const newColor = colors[colorIndex];
-                newCircle.setOptions({ fillColor: newColor, strokeColor: newColor });
-            }
 
-            updateFirestoreData();
-        });
+		newCircle.addListener('click', () => {
+			if (colorIndex === 2) {
+				newCircle.setMap(null);
+				const index = circles.indexOf(newCircle);
+				circles.splice(index, 1);
+
+				// Remove the corresponding document from Firestore
+				const docRef = db.collection('addresses')
+								.doc(`${newCircle.getCenter().lat()}_${newCircle.getCenter().lng()}`); 
+				docRef.delete().then(() => {
+					console.log('Document successfully deleted.');
+				}).catch((error) => {
+					console.error('Error removing document:', error);
+				});
+
+			} else {
+				colorIndex++;
+				const newColor = colors[colorIndex];
+				newCircle.setOptions({ fillColor: newColor, strokeColor: newColor });
+			}
+
+			updateFirestoreData();
+		});
 
         return newCircle;
     }
