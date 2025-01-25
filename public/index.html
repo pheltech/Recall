@@ -35,42 +35,22 @@
 <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-firestore.js"></script>
 <script>
-    const firebaseConfig = {
-        apiKey: "your-api-key",
-        authDomain: "your-auth-domain",
-        projectId: "country-place-recall",
-        storageBucket: "country-place-recall.appspot.com",
-        messagingSenderId: "564193307037",
-        appId: "1:564193307037:web:4264759528343009d4a774",
-        measurementId: "G-QSL43X9B2J"
-    };
+	  var firebaseConfig = {
+		  apiKey: "AIzaSyAiZBjOBSH4dFUgT-cxNgIUSSGNciLgMQY",
+		  authDomain: "country-place-recall.firebaseapp.com",
+		  projectId: "country-place-recall",
+		  storageBucket: "country-place-recall.appspot.com",
+		  messagingSenderId: "564193307037",
+		  appId: "1:564193307037:web:4264759528343009d4a774",
+		  measurementId: "G-QSL43X9B2J"
+	  };
+	  firebase.initializeApp(firebaseConfig);
+	  const db = firebase.firestore(); 
 
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.firestore(); 
-
+    let map;
     const circles = [];
     const colors = ['yellow', 'green', 'red'];
 
-    function fetchFirestoreData() {
-        db.collection('addresses').get().then((querySnapshot) => {
-            if (querySnapshot.empty) {
-                console.log('No matching documents.');
-                return;
-            }
-            querySnapshot.forEach((doc) => {
-                const point = doc.data();
-                if (point.lat && point.lng) {
-                    const latLng = new google.maps.LatLng(point.lat, point.lng);
-                    const circle = createCircle(latLng, point.status || 'yellow');
-                    circles.push(circle);
-                }
-            });
-            console.log('Firestore data successfully fetched and rendered on the map.');
-        }).catch((error) => {
-            console.error('Error fetching Firestore data:', error);
-        });
-    }
-    
 	function initMap() {
 		const neighborhoodBounds = {
 			north: 28.1080,
@@ -99,57 +79,51 @@
 			clickable: false
 		});
 
-		let boundaryPolygon
-
-		const xhr = new XMLHttpRequest();
+		// Load KML manually
+		var xhr = new XMLHttpRequest();
 		xhr.open("GET", "https://raw.githubusercontent.com/pheltech/Recall/refs/heads/main/public/Country%20Place.kml?v=1", true);
 		xhr.onreadystatechange = function() {
-			if (xhr.readyState === 4) {
-				if (xhr.status === 200) {
-					// Parsing KML data analyzing
-					const parser = new DOMParser();
-					const xmlDoc = parser.parseFromString(xhr.responseText, "text/xml");
-					const placemarks = xmlDoc.getElementsByTagName("Placemark");
+			if (xhr.readyState == 4) {
+				if (xhr.status == 200) {
+					// Parse KML
+					var parser = new DOMParser();
+					var xmlDoc = parser.parseFromString(xhr.responseText, "text/xml");
+					var placemarks = xmlDoc.getElementsByTagName("Placemark");
 
-					for (let i = 0; i < placemarks.length; i++) {
-						const coords = placemarks[i].getElementsByTagName("coordinates")[0].textContent.trim().split(/[\s\n]+/);
+					console.info("Placemark content:", placemarks);
 
-						const boundaryCoords = [];
+					for (var i = 0; i < placemarks.length; i++) {
+						var coords = placemarks[i].getElementsByTagName("coordinates")[0].
+							textContent.trim().split(/[\s\n]+/);
+
+						var boundaryCoords = [];
 						coords.forEach(coord => {
-							const latLng = coord.split(",");
+							var latLng = coord.split(",");
 							if (latLng.length >= 2) {
-								const lat = parseFloat(latLng[1]);
-								const lng = parseFloat(latLng[0]);
+								var lat = parseFloat(latLng[1]);
+								var lng = parseFloat(latLng[0]);
 								if (!isNaN(lat) && !isNaN(lng)) {
 									boundaryCoords.push({ lat: lat, lng: lng });
 								}
 							}
 						});
 
-						boundaryPolygon = new google.maps.Polygon({
-							paths: boundaryCoords,
-							strokeColor: '#FF0000',
-							strokeOpacity: 1,
-							strokeWeight: 2,
-							fillColor: '#FFA07A',  // Adjust fill to indicate boundary clarity
-							fillOpacity: 0.4,
-							map: map
+						const boundaryPolygon = new google.maps.Polygon({ paths: boundaryCoords });
+						console.info("Boundary Polygon Properties:", boundaryPolygon.getPaths());
+
+						map.addListener("click", (event) => {
+							const latLng = event.latLng;
+							console.info("Clicked location:", latLng);
+
+							if (google.maps.geometry.poly.containsLocation(latLng, boundaryPolygon)) {
+								handleMapClick(latLng);
+							} else {
+								alert("Markers can only be placed within Country Place!");
+							}
 						});
 					}
-					console.info("Boundary Polygon: ", boundaryPolygon.getPath().getArray());
-
-					map.addListener("click", (event) => {
-						const latLng = event.latLng;
-						console.info("Clicked Position: ", latLng);
-						if (google.maps.geometry.poly.containsLocation(latLng, boundaryPolygon)) {
-							handleMapClick(latLng);
-						} else {
-							alert("Markers can only be placed inside Country Place polygon boundary!");
-						}
-					});
-
 				} else {
-					console.warn("Failed KML load Data: Error ");
+					console.warn("Failed to load KML data:", xhr.statusText);
 				}
 			}
 		};
@@ -159,6 +133,29 @@
 
 		fetchFirestoreData();
 	}
+
+
+	function fetchFirestoreData() {
+		db.collection('addresses').get().then((querySnapshot) => {
+			if (querySnapshot.empty) {
+				console.log('No matching documents.');
+				return;
+			}
+			
+			querySnapshot.forEach((doc) => {
+				const point = doc.data();
+				if (point.lat && point.lng) {
+					const latLng = new google.maps.LatLng(point.lat, point.lng);
+					const circle = createCircle(latLng, point.status || 'yellow');
+					circles.push(circle);
+				}
+			});
+			console.log('Firestore data successfully fetched and rendered on the map.');
+		}).catch(error => {
+			console.error('Error fetching Firestore data:', error);
+		});
+	}
+
 
     function createCircle(location, color) {
         const newCircle = new google.maps.Circle({
@@ -174,29 +171,30 @@
 
         let colorIndex = colors.indexOf(color);
 
-        newCircle.addListener('click', () => {
-            if (colorIndex === 2) {
-                newCircle.setMap(null);
-                const index = circles.indexOf(newCircle);
-                circles.splice(index, 1);
 
-                // Remove the corresponding document from Firestore
-                const docRef = db.collection('addresses')
-                    .doc(`${newCircle.getCenter().lat()}_${newCircle.getCenter().lng()}`);
-                docRef.delete().then(() => {
-                    console.log('Document successfully deleted.');
-                }).catch((error) => {
-                    console.error('Error removing document:', error);
-                });
+		newCircle.addListener('click', () => {
+			if (colorIndex === 2) {
+				newCircle.setMap(null);
+				const index = circles.indexOf(newCircle);
+				circles.splice(index, 1);
 
-            } else {
-                colorIndex++;
-                const newColor = colors[colorIndex];
-                newCircle.setOptions({ fillColor: newColor, strokeColor: newColor });
-            }
+				// Remove the corresponding document from Firestore
+				const docRef = db.collection('addresses')
+								.doc(`${newCircle.getCenter().lat()}_${newCircle.getCenter().lng()}`); 
+				docRef.delete().then(() => {
+					console.log('Document successfully deleted.');
+				}).catch((error) => {
+					console.error('Error removing document:', error);
+				});
 
-            updateFirestoreData();
-        });
+			} else {
+				colorIndex++;
+				const newColor = colors[colorIndex];
+				newCircle.setOptions({ fillColor: newColor, strokeColor: newColor });
+			}
+
+			updateFirestoreData();
+		});
 
         return newCircle;
     }
@@ -208,24 +206,25 @@
         updateFirestoreData();
     }
 	
-    function updateFirestoreData() {
-        const batch = db.batch();
-        circles.forEach(circle => {
-            const docRef = db.collection('addresses')
-                .doc(`${circle.getCenter().lat()}_${circle.getCenter().lng()}`);
-            batch.set(docRef, {
-                lat: circle.getCenter().lat(),
-                lng: circle.getCenter().lng(),
-                status: circle.get('fillColor') // updated to proper access to color
-            });
-        });
+	
+	function updateFirestoreData() {
+		const batch = db.batch();
+		circles.forEach(circle => {
+			const docRef = db.collection('addresses')
+							 .doc(`${circle.getCenter().lat()}_${circle.getCenter().lng()}`); 
+			batch.set(docRef, {
+				lat: circle.getCenter().lat(),
+				lng: circle.getCenter().lng(),
+				status: circle.get('fillColor') // updated to proper access to color
+			});
+		});
 
-        batch.commit().then(() => {
-            console.log('Firestore data successfully updated.');
-        }).catch((error) => {
-            console.error('Error updating Firestore data:', error);
-        });
-    }
+		batch.commit().then(() => {
+			console.log('Firestore data successfully updated.');
+		}).catch(error => {
+			console.error('Error updating Firestore data:', error);
+		});
+	}
 
     window.onload = initMap;
 </script>
