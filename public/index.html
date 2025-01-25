@@ -60,18 +60,9 @@
         };
 
         const mapStyle = [
-            {
-                featureType: "poi.business",
-                stylers: [{ visibility: "off" }]
-            },
-            {
-                featureType: "poi.place_of_worship",
-                stylers: [{ visibility: "off" }]
-            },
-            {
-                featureType: "poi.school",
-                stylers: [{ visibility: "off" }]
-            }
+            {featureType: "poi.business", stylers: [{ visibility: "off" }]},
+            {featureType: "poi.place_of_worship", stylers: [{ visibility: "off" }]},
+            {featureType: "poi.school", stylers: [{ visibility: "off" }]}
         ];
 
         map = new google.maps.Map(document.getElementById("map"), {
@@ -88,8 +79,21 @@
             clickable: false
         });
 
+		// Define boundary polygon using example coordinates from KML Layer
+		const boundaryCoords = [
+			{lat: 28.1080, lng: -82.5189},
+			{lat: 28.1080, lng: -82.5445},
+			{lat: 28.0826, lng: -82.5445},
+			{lat: 28.0826, lng: -82.5189}
+		];
+		const boundaryPolygon = new google.maps.Polygon({paths: boundaryCoords});
+
         map.addListener("click", (event) => {
-            handleMapClick(event.latLng);
+            if (google.maps.geometry.poly.containsLocation(event.latLng, boundaryPolygon)) {
+				handleMapClick(event.latLng);
+			} else {
+				alert("Markers can only be placed within the defined boundary!");
+			}
         });
 
         map.setOptions({ disableDoubleClickZoom: true });
