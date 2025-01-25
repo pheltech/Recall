@@ -51,6 +51,26 @@
     const circles = [];
     const colors = ['yellow', 'green', 'red'];
 
+	function fetchFirestoreData() {
+		db.collection('addresses').get().then((querySnapshot) => {
+			if (querySnapshot.empty) {
+				console.log('No matching documents.');
+				return;
+			}
+			querySnapshot.forEach((doc) => {
+				const point = doc.data();
+				if (point.lat && point.lng) {
+					const latLng = new google.maps.LatLng(point.lat, point.lng);
+					const circle = createCircle(latLng, point.status || 'yellow');
+					circles.push(circle);
+				}
+			});
+			console.log('Firestore data successfully fetched and rendered on the map.');
+		}).catch(error => {
+			console.error('Error fetching Firestore data:', error);
+		});
+	}
+
 	function initMap() {
 		const neighborhoodBounds = {
 			north: 28.1080,
@@ -81,7 +101,7 @@
 
 		let boundaryPolygon;
 
-		// Load KML data manually
+		// Consolidated KML loading and boundary setup
 		const xhr = new XMLHttpRequest();
 		xhr.open("GET", "https://raw.githubusercontent.com/pheltech/Recall/refs/heads/main/public/Country%20Place.kml?v=1", true);
 		xhr.onreadystatechange = function() {
@@ -106,35 +126,16 @@
 						}
 					});
 
-					boundaryPolygon = new google.maps.Polygon({ paths: boundaryCoords });
+					boundaryPolygon = new google.maps.Polygon({
+						paths: boundaryCoords,
+						strokeColor: '#FF0000',
+						strokeOpacity: 1,
+						strokeWeight: 2,
+						fillColor: '#FF0000',
+						fillOpacity: 0,
+						map: map
+					});
 				}
-
-				// Add overlay to hide outside area
-				const overlayBounds = {
-					north: 28.1080,
-					south: 28.0826,
-					east: -82.5189,
-					west: -82.5445
-				};
-
-				const outerBounds = [
-					{ lat: overlayBounds.north, lng: overlayBounds.west },
-					{ lat: overlayBounds.north, lng: overlayBounds.east },
-					{ lat: overlayBounds.south, lng: overlayBounds.east },
-					{ lat: overlayBounds.south, lng: overlayBounds.west }
-				];
-
-				const maskBounds = [outerBounds, boundaryPolygon.getPath().getArray()];
-				
-				new google.maps.Polygon({
-					paths: maskBounds,
-					strokeColor: '#000',
-					strokeOpacity: 0,
-					strokeWeight: 0,
-					fillColor: '#fff',
-					fillOpacity: 0.7,
-					map: map
-				});
 
 				console.info("Boundary Polygon Properties:", boundaryPolygon.getPaths());
 			} else {
@@ -145,9 +146,18 @@
 
 		map.setOptions({ disableDoubleClickZoom: true });
 
+		// Fetch Firestore data ensuring boundaries intact
 		fetchFirestoreData();
-	}
 
+		map.addListener("click", function(event) {
+			const latLng = event.latLng;
+			if (google.maps.geometry.poly.containsLocation(latLng, boundaryPolygon)) {
+				handleMapClick(latLng);
+			} else {
+				alert("Markers can only be placed within Country Place!");
+			}
+		});
+	}
 
     function createCircle(location, color) {
         const newCircle = new google.maps.Circle({
@@ -197,7 +207,6 @@
         circles.push(newCircle);
         updateFirestoreData();
     }
-	
 	
 	function updateFirestoreData() {
 		const batch = db.batch();
