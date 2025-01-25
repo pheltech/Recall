@@ -14,6 +14,8 @@ jobs:
         uses: actions/setup-node@v2
         with:
           node-version: '14'
+      - name: Change Directory
+        run: cd /home/runner/work/Recall/Recall
       - name: Install dependencies
         run: npm install
       - name: Install Firebase Tools
@@ -22,18 +24,18 @@ jobs:
         run: |
           set -x
           npm ci
-      - name: Set PATH
-        run: export PATH=$PATH:/usr/local/bin
+      - name: Remove existing npx
+        run: rm -f /opt/hostedtoolcache/node/14.21.3/x64/bin/npx
       - name: Install NPX
         run: npm install -g npx
       - name: Build project
         run: npm run build
       - name: List files in root directory
-        run: ls -la
+        run: dir
       - name: Deploy to Firebase Hosting
         uses: FirebaseExtended/action-hosting-deploy@v0
         with:
-          repoToken: '${{ secrets.GITHUB_TOKEN }}'
-          firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_COUNTRY_PLACE_RECALL }}'
-          projectId: 'country-place-recall'
+          repoToken: ${{ secrets.GITHUB_TOKEN }}
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_COUNTRY_PLACE_RECALL }}
+          projectId: country-place-recall
           entryPoint: .
