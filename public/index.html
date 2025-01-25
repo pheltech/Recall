@@ -71,97 +71,94 @@
         });
     }
     
-    function initMap() {
-        const neighborhoodBounds = {
-            north: 28.1080,
-            south: 28.0826,
-            east: -82.5189,
-            west: -82.5445
-        };
+	function initMap() {
+		const neighborhoodBounds = {
+			north: 28.1080,
+			south: 28.0826,
+			east: -82.5189,
+			west: -82.5445,
+		};
 
-        const mapStyle = [
-            { featureType: 'poi.business', stylers: [{ visibility: 'off' }] },
-            { featureType: 'poi.place_of_worship', stylers: [{ visibility: 'off' }] },
-            { featureType: 'poi.school', stylers: [{ visibility: 'off' }] }
-        ];
- 
-        map = new google.maps.Map(document.getElementById('map'), {
-            center: { lat: 28.095147, lng: -82.531077 },
-            zoom: 15,
-            restriction: { latLngBounds: neighborhoodBounds, strictBounds: true },
-            gestureHandling: 'greedy',
-            styles: mapStyle
-        });
+		const mapStyle = [
+			{ featureType: 'poi.business', stylers: [{ visibility: 'off' }] },
+			{ featureType: 'poi.place_of_worship', stylers: [{ visibility: 'off' }] },
+			{ featureType: 'poi.school', stylers: [{ visibility: 'off' }] }
+		];
 
-        const kmlLayer = new google.maps.KmlLayer({
-            url: 'https://raw.githubusercontent.com/pheltech/Recall/refs/heads/main/public/Country%20Place.kml?v=1',
-            map: map,
-            clickable: false
-        });
+		map = new google.maps.Map(document.getElementById('map'), {
+			center: { lat: 28.095147, lng: -82.531077 },
+			zoom: 15,
+			restriction: { latLngBounds: neighborhoodBounds, strictBounds: true },
+			gestureHandling: 'greedy',
+			styles: mapStyle
+		});
 
-        let boundaryPolygon;
+		const kmlLayer = new google.maps.KmlLayer({
+			url: 'https://raw.githubusercontent.com/pheltech/Recall/refs/heads/main/public/Country%20Place.kml?v=1',
+			map: map,
+			clickable: false
+		});
 
-        // Load KML data
-        const xhr = new XMLHttpRequest();
-        xhr.open("GET", "https://raw.githubusercontent.com/pheltech/Recall/refs/heads/main/public/Country%20Place.kml?v=1", true);
-        xhr.onreadystatechange = function() {
-            if (xhr.readyState === 4) {
-                if (xhr.status === 200) {
-                    // Parse KML
-                    const parser = new DOMParser();
-                    const xmlDoc = parser.parseFromString(xhr.responseText, "text/xml");
-                    const placemarks = xmlDoc.getElementsByTagName("Placemark");
+		let boundaryPolygon
 
-                    for (let i = 0; i < placemarks.length; i++) {
-                        const coords = placemarks[i].getElementsByTagName("coordinates")[0]
-                            .textContent.trim().split(/[\s\n]+/);
+		const xhr = new XMLHttpRequest();
+		xhr.open("GET", "https://raw.githubusercontent.com/pheltech/Recall/refs/heads/main/public/Country%20Place.kml?v=1", true);
+		xhr.onreadystatechange = function() {
+			if (xhr.readyState === 4) {
+				if (xhr.status === 200) {
+					// Parsing KML data analyzing
+					const parser = new DOMParser();
+					const xmlDoc = parser.parseFromString(xhr.responseText, "text/xml");
+					const placemarks = xmlDoc.getElementsByTagName("Placemark");
 
-                        const boundaryCoords = [];
-                        coords.forEach(coord => {
-                            const latLng = coord.split(",");
-                            if (latLng.length >= 2) {
-                                const lat = parseFloat(latLng[1]);
-                                const lng = parseFloat(latLng[0]);
-                                if (!isNaN(lat) && !isNaN(lng)) {
-                                    boundaryCoords.push({ lat: lat, lng: lng });
-                                }
-                            }
-                        });
+					for (let i = 0; i < placemarks.length; i++) {
+						const coords = placemarks[i].getElementsByTagName("coordinates")[0].textContent.trim().split(/[\s\n]+/);
 
-                        boundaryPolygon = new google.maps.Polygon({
-                            paths: boundaryCoords,
-                            strokeColor: '#FF0000',
-                            strokeOpacity: 1,
-                            strokeWeight: 2,
-                            fillColor: '#FF0000',
-                            fillOpacity: 0.1,
-                            map: map
-                        });
-                    }
+						const boundaryCoords = [];
+						coords.forEach(coord => {
+							const latLng = coord.split(",");
+							if (latLng.length >= 2) {
+								const lat = parseFloat(latLng[1]);
+								const lng = parseFloat(latLng[0]);
+								if (!isNaN(lat) && !isNaN(lng)) {
+									boundaryCoords.push({ lat: lat, lng: lng });
+								}
+							}
+						});
 
-                    console.info("Boundary Polygon Paths: ", boundaryPolygon.getPath().getArray());
+						boundaryPolygon = new google.maps.Polygon({
+							paths: boundaryCoords,
+							strokeColor: '#FF0000',
+							strokeOpacity: 1,
+							strokeWeight: 2,
+							fillColor: '#FFA07A',  // Adjust fill to indicate boundary clarity
+							fillOpacity: 0.4,
+							map: map
+						});
+					}
+					console.info("Boundary Polygon: ", boundaryPolygon.getPath().getArray());
 
-                    // Listener for marker validation
-                    map.addListener("click", (event) => {
-                        const latLng = event.latLng;
-                        if (google.maps.geometry.poly.containsLocation(latLng, boundaryPolygon)) {
-                            handleMapClick(latLng);
-                        } else {
-                            alert("Markers can only be placed within Country Place!");
-                        }
-                        console.info("Clicked Location: ", latLng);
-                    });
-                } else {
-                    console.warn("Failed to load KML data:", xhr.statusText);
-                }
-            }
-        };
-        xhr.send();
+					map.addListener("click", (event) => {
+						const latLng = event.latLng;
+						console.info("Clicked Position: ", latLng);
+						if (google.maps.geometry.poly.containsLocation(latLng, boundaryPolygon)) {
+							handleMapClick(latLng);
+						} else {
+							alert("Markers can only be placed inside Country Place polygon boundary!");
+						}
+					});
 
-        map.setOptions({ disableDoubleClickZoom: true });
+				} else {
+					console.warn("Failed KML load Data: Error ");
+				}
+			}
+		};
+		xhr.send();
 
-        fetchFirestoreData();
-    }
+		map.setOptions({ disableDoubleClickZoom: true });
+
+		fetchFirestoreData();
+	}
 
     function createCircle(location, color) {
         const newCircle = new google.maps.Circle({
