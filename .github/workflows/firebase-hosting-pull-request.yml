@@ -24,6 +24,8 @@ jobs:
         run: |
           set -x
           npm ci
+      - name: Install NPX Forcefully
+        run: npm install -g npx --force
       - name: Build project
         run: npm run build
       - name: List files in root directory
