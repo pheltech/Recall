@@ -22,10 +22,6 @@ jobs:
         run: |
           set -x
           npm ci
-      - name: Remove existing npx
-        run: rm -f /opt/hostedtoolcache/node/14.21.3/x64/bin/npx
-      - name: Install NPX
-        run: npm install -g npx
       - name: Build project
         run: npm run build
       - name: List files in root directory
@@ -35,5 +31,5 @@ jobs:
         with:
           repoToken: ${{ secrets.GITHUB_TOKEN }}
           firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_COUNTRY_PLACE_RECALL }}
-          projectId: pheltech-recall
+          projectId: country-place-recall
           entryPoint: .
