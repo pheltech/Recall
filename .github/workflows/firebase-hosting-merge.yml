@@ -8,12 +8,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Change Directory
+        run: cd /home/runner/work/Recall/Recall
       - name: Set up Node.js
         uses: actions/setup-node@v2
         with:
           node-version: '14'
-      - name: Change Directory
-        run: cd /home/runner/work/Recall/Recall
       - name: Install dependencies
         run: npm install
       - name: Install Firebase Tools
@@ -35,5 +35,5 @@ jobs:
         with:
           repoToken: ${{ secrets.GITHUB_TOKEN }}
           firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_COUNTRY_PLACE_RECALL }}
-          projectId: country-place-recall
+          projectId: pheltech-recall
           entryPoint: .
