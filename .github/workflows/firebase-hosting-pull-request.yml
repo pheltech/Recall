@@ -13,6 +13,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v2
+        with:
+          node-version: '14'
+      - name: Install dependencies
+        run: npm install
+      - name: Install Firebase Tools
+        run: npm install -g firebase-tools@latest
       - name: List files in root directory
         run: ls -la
       - uses: FirebaseExtended/action-hosting-deploy@v0
