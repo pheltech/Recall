@@ -79,49 +79,64 @@
 			clickable: false
 		});
 
-		var boundaryPolygon;
+		let boundaryPolygon;
 
 		// Load KML data manually
-		var xhr = new XMLHttpRequest();
+		const xhr = new XMLHttpRequest();
 		xhr.open("GET", "https://raw.githubusercontent.com/pheltech/Recall/refs/heads/main/public/Country%20Place.kml?v=1", true);
 		xhr.onreadystatechange = function() {
-			if (xhr.readyState == 4 && xhr.status == 200) {
+			if (xhr.readyState === 4 && xhr.status === 200) {
 				// Parse KML
-				var parser = new DOMParser();
-				var xmlDoc = parser.parseFromString(xhr.responseText, "text/xml");
-				var placemarks = xmlDoc.getElementsByTagName("Placemark");
+				const parser = new DOMParser();
+				const xmlDoc = parser.parseFromString(xhr.responseText, "text/xml");
+				const placemarks = xmlDoc.getElementsByTagName("Placemark");
 
-				for (var i = 0; i < placemarks.length; i++) {
-					var coords = placemarks[i].getElementsByTagName("coordinates")[0].
-						textContent.trim().split(/[\s\n]+/);
+				for (let i = 0; i < placemarks.length; i++) {
+					const coords = placemarks[i].getElementsByTagName("coordinates")[0].textContent.trim().split(/[\s\n]+/);
 
-					var boundaryCoords = [];
+					const boundaryCoords = [];
 					coords.forEach(coord => {
-						var latLng = coord.split(",");
+						const latLng = coord.split(",");
 						if (latLng.length >= 2) {
-							var lat = parseFloat(latLng[1]);
-							var lng = parseFloat(latLng[0]);
+							const lat = parseFloat(latLng[1]);
+							const lng = parseFloat(latLng[0]);
 							if (!isNaN(lat) && !isNaN(lng)) {
 								boundaryCoords.push({ lat: lat, lng: lng });
 							}
 						}
 					});
 
-					boundaryPolygon = new google.maps.Polygon({
-						paths: [
-							...[boundaryCoords],
-							...google.maps.geometry.encoding.decodePath('encodedPolylineStringHere') // Encoded polyline for full map coverage
-						],
-						strokeColor: '#000',
-						strokeOpacity: 0,
-						strokeWeight: 0,
-						fillColor: '#fff',
-						fillOpacity: 0.7,
-						map: map
-					});
-
-					console.info("Boundary Polygon Properties:", boundaryPolygon.getPaths());
+					boundaryPolygon = new google.maps.Polygon({ paths: boundaryCoords });
 				}
+
+				// Add overlay to hide outside area
+				const overlayBounds = {
+					north: 28.1080,
+					south: 28.0826,
+					east: -82.5189,
+					west: -82.5445
+				};
+
+				const outerBounds = [
+					{ lat: overlayBounds.north, lng: overlayBounds.west },
+					{ lat: overlayBounds.north, lng: overlayBounds.east },
+					{ lat: overlayBounds.south, lng: overlayBounds.east },
+					{ lat: overlayBounds.south, lng: overlayBounds.west }
+				];
+
+				const maskBounds = [outerBounds, boundaryPolygon.getPath().getArray()];
+				
+				new google.maps.Polygon({
+					paths: maskBounds,
+					strokeColor: '#000',
+					strokeOpacity: 0,
+					strokeWeight: 0,
+					fillColor: '#fff',
+					fillOpacity: 0.7,
+					map: map
+				});
+
+				console.info("Boundary Polygon Properties:", boundaryPolygon.getPaths());
 			} else {
 				console.warn("Failed to load KML data:", xhr.statusText);
 			}
@@ -131,28 +146,6 @@
 		map.setOptions({ disableDoubleClickZoom: true });
 
 		fetchFirestoreData();
-	}
-
-
-	function fetchFirestoreData() {
-		db.collection('addresses').get().then((querySnapshot) => {
-			if (querySnapshot.empty) {
-				console.log('No matching documents.');
-				return;
-			}
-			
-			querySnapshot.forEach((doc) => {
-				const point = doc.data();
-				if (point.lat && point.lng) {
-					const latLng = new google.maps.LatLng(point.lat, point.lng);
-					const circle = createCircle(latLng, point.status || 'yellow');
-					circles.push(circle);
-				}
-			});
-			console.log('Firestore data successfully fetched and rendered on the map.');
-		}).catch(error => {
-			console.error('Error fetching Firestore data:', error);
-		});
 	}
 
 
