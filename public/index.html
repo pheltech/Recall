@@ -79,52 +79,51 @@
 			clickable: false
 		});
 
-		// Load KML manually
+		var boundaryPolygon;
+
+		// Load KML data manually
 		var xhr = new XMLHttpRequest();
 		xhr.open("GET", "https://raw.githubusercontent.com/pheltech/Recall/refs/heads/main/public/Country%20Place.kml?v=1", true);
 		xhr.onreadystatechange = function() {
-			if (xhr.readyState == 4) {
-				if (xhr.status == 200) {
-					// Parse KML
-					var parser = new DOMParser();
-					var xmlDoc = parser.parseFromString(xhr.responseText, "text/xml");
-					var placemarks = xmlDoc.getElementsByTagName("Placemark");
+			if (xhr.readyState == 4 && xhr.status == 200) {
+				// Parse KML
+				var parser = new DOMParser();
+				var xmlDoc = parser.parseFromString(xhr.responseText, "text/xml");
+				var placemarks = xmlDoc.getElementsByTagName("Placemark");
 
-					console.info("Placemark content:", placemarks);
+				for (var i = 0; i < placemarks.length; i++) {
+					var coords = placemarks[i].getElementsByTagName("coordinates")[0].
+						textContent.trim().split(/[\s\n]+/);
 
-					for (var i = 0; i < placemarks.length; i++) {
-						var coords = placemarks[i].getElementsByTagName("coordinates")[0].
-							textContent.trim().split(/[\s\n]+/);
-
-						var boundaryCoords = [];
-						coords.forEach(coord => {
-							var latLng = coord.split(",");
-							if (latLng.length >= 2) {
-								var lat = parseFloat(latLng[1]);
-								var lng = parseFloat(latLng[0]);
-								if (!isNaN(lat) && !isNaN(lng)) {
-									boundaryCoords.push({ lat: lat, lng: lng });
-								}
+					var boundaryCoords = [];
+					coords.forEach(coord => {
+						var latLng = coord.split(",");
+						if (latLng.length >= 2) {
+							var lat = parseFloat(latLng[1]);
+							var lng = parseFloat(latLng[0]);
+							if (!isNaN(lat) && !isNaN(lng)) {
+								boundaryCoords.push({ lat: lat, lng: lng });
 							}
-						});
+						}
+					});
 
-						const boundaryPolygon = new google.maps.Polygon({ paths: boundaryCoords });
-						console.info("Boundary Polygon Properties:", boundaryPolygon.getPaths());
+					boundaryPolygon = new google.maps.Polygon({
+						paths: [
+							...[boundaryCoords],
+							...google.maps.geometry.encoding.decodePath('encodedPolylineStringHere') // Encoded polyline for full map coverage
+						],
+						strokeColor: '#000',
+						strokeOpacity: 0,
+						strokeWeight: 0,
+						fillColor: '#fff',
+						fillOpacity: 0.7,
+						map: map
+					});
 
-						map.addListener("click", (event) => {
-							const latLng = event.latLng;
-							console.info("Clicked location:", latLng);
-
-							if (google.maps.geometry.poly.containsLocation(latLng, boundaryPolygon)) {
-								handleMapClick(latLng);
-							} else {
-								alert("Markers can only be placed within Country Place!");
-							}
-						});
-					}
-				} else {
-					console.warn("Failed to load KML data:", xhr.statusText);
+					console.info("Boundary Polygon Properties:", boundaryPolygon.getPaths());
 				}
+			} else {
+				console.warn("Failed to load KML data:", xhr.statusText);
 			}
 		};
 		xhr.send();
