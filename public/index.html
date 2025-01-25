@@ -100,10 +100,15 @@
 						}
 					}
 				});
+				console.log("Parsed boundary coordinates:", boundaryCoords);
 				
 				const boundaryPolygon = new google.maps.Polygon({ paths: boundaryCoords });
+				console.log("Boundary Polygon:", boundaryPolygon);
 
 				map.addListener("click", (event) => {
+					const latLng = event.latLng;
+					console.log("Clicked location:", latLng);
+					
 					if (google.maps.geometry.poly.containsLocation(event.latLng, boundaryPolygon)) {
 						handleMapClick(event.latLng);
 					} else {
