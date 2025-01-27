@@ -26,205 +26,201 @@
     <div id="map"></div>
     <div id="legend">
         <h3>Legend</h3>
-        <p><span style="color: yellow;">&#9679;</span> Yellow - Has a recall sheet but no decision made/response given yet</p>
         <p><span style="color: green;">&#9679;</span> Green - Has either signed the sheet or declined to sign</p>
         <p><span style="color: red;">&#9679;</span> Red - No record of contact for recall sheet</p>
     </div>
     <ul id="addressList"></ul>
-	
+    
 <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-firestore.js"></script>
 <script>
-	  var firebaseConfig = {
-		  apiKey: "AIzaSyAiZBjOBSH4dFUgT-cxNgIUSSGNciLgMQY",
-		  authDomain: "country-place-recall.firebaseapp.com",
-		  projectId: "country-place-recall",
-		  storageBucket: "country-place-recall.appspot.com",
-		  messagingSenderId: "564193307037",
-		  appId: "1:564193307037:web:4264759528343009d4a774",
-		  measurementId: "G-QSL43X9B2J"
-	  };
-	  firebase.initializeApp(firebaseConfig);
-	  const db = firebase.firestore(); 
+    var firebaseConfig = {
+        apiKey: "AIzaSyAiZBjOBSH4dFUgT-cxNgIUSSGNciLgMQY",
+        authDomain: "country-place-recall.firebaseapp.com",
+        projectId: "country-place-recall",
+        storageBucket: "country-place-recall.appspot.com",
+        messagingSenderId: "564193307037",
+        appId: "1:564193307037:web:4264759528343009d4a774",
+        measurementId: "G-QSL43X9B2J"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore(); 
 
     let map;
-    const circles = [];
-    const colors = ['yellow', 'green', 'red'];
 
-	function initMap() {
-		const neighborhoodBounds = {
-			north: 28.1080,
-			south: 28.0826,
-			east: -82.5189,
-			west: -82.5445,
-		};
+    function initMap() {
+        const neighborhoodBounds = {
+            north: 28.1080,
+            south: 28.0826,
+            east: -82.5189,
+            west: -82.5445,
+        };
 
-		const mapStyle = [
-			{ featureType: 'poi.business', stylers: [{ visibility: 'off' }] },
-			{ featureType: 'poi.place_of_worship', stylers: [{ visibility: 'off' }] },
-			{ featureType: 'poi.school', stylers: [{ visibility: 'off' }] }
-		];
+        const mapStyle = [
+            { featureType: 'poi.business', stylers: [{ visibility: 'off' }] },
+            { featureType: 'poi.place_of_worship', stylers: [{ visibility: 'off' }] },
+            { featureType: 'poi.school', stylers: [{ visibility: 'off' }] },
+            { featureType: 'poi.medical', stylers: [{ visibility: 'off' }] }
+        ];
 
-		map = new google.maps.Map(document.getElementById('map'), {
-			center: { lat: 28.095147, lng: -82.531077 },
-			zoom: 15,
-			restriction: { latLngBounds: neighborhoodBounds, strictBounds: true },
-			gestureHandling: 'greedy',
-			styles: mapStyle
-		});
+        map = new google.maps.Map(document.getElementById('map'), {
+            center: { lat: 28.095147, lng: -82.531077 },
+            zoom: 15,
+            restriction: { latLngBounds: neighborhoodBounds, strictBounds: true },
+            gestureHandling: 'greedy',
+            styles: mapStyle
+        });
 
-		const kmlLayer = new google.maps.KmlLayer({
-			url: 'https://raw.githubusercontent.com/pheltech/Recall/refs/heads/main/public/Country%20Place%20Recall.kml?v=1',
-			map: map,
-			clickable: false
-		});
+        map.setOptions({ disableDoubleClickZoom: true });
 
-		// Load KML manually
-		var xhr = new XMLHttpRequest();
-		xhr.open("GET", "https://raw.githubusercontent.com/pheltech/Recall/refs/heads/main/public/Country%20Place%20Recall.kml?v=1", true);
-		xhr.onreadystatechange = function() {
-			if (xhr.readyState == 4) {
-				if (xhr.status == 200) {
-					// Parse KML
-					var parser = new DOMParser();
-					var xmlDoc = parser.parseFromString(xhr.responseText, "text/xml");
-					var placemarks = xmlDoc.getElementsByTagName("Placemark");
+        // Load KML file and separate layers
+        loadKmlProperties();
 
-					console.info("Placemark content:", placemarks);
+        // Fetch previously stored circles from Firestore
+        fetchFirestoreData();
+    }
 
-					for (var i = 0; i < placemarks.length; i++) {
-						var coords = placemarks[i].getElementsByTagName("coordinates")[0].
-							textContent.trim().split(/[\s\n]+/);
+    function fetchFirestoreData() {
+        db.collection('addresses').get().then((querySnapshot) => {
+            if (querySnapshot.empty) {
+                console.log('No matching documents.');
+                return;
+            }
 
-						var boundaryCoords = [];
-						coords.forEach(coord => {
-							var latLng = coord.split(",");
-							if (latLng.length >= 2) {
-								var lat = parseFloat(latLng[1]);
-								var lng = parseFloat(latLng[0]);
-								if (!isNaN(lat) && !isNaN(lng)) {
-									boundaryCoords.push({ lat: lat, lng: lng });
-								}
-							}
-						});
+            querySnapshot.forEach((doc) => {
+                const point = doc.data();
+                console.log('Fetched from Firestore:', point);
+                if (point.lat && point.lng) {
+                    const latLng = new google.maps.LatLng(point.lat, point.lng);
+                    createCircle(latLng, point.color || 'red');
+                }
+            });
+            console.log('Firestore data successfully fetched and rendered on the map.');
+        }).catch(error => {
+            console.error('Error fetching Firestore data:', error);
+        });
+    }
 
-						const boundaryPolygon = new google.maps.Polygon({ paths: boundaryCoords });
-						console.info("Boundary Polygon Properties:", boundaryPolygon.getPaths());
+    function loadKmlProperties() {
+        var xhr = new XMLHttpRequest();
+        xhr.open("GET", "https://raw.githubusercontent.com/pheltech/Recall/refs/heads/main/public/Country%20Place%20Recall.kml?v=1", true);
+        xhr.onreadystatechange = function() {
+            if (xhr.readyState == 4) {
+                if (xhr.status == 200) {
+                    var parser = new DOMParser();
+                    var xmlDoc = parser.parseFromString(xhr.responseText, "text/xml");
+                    var placemarks = xmlDoc.getElementsByTagName("Placemark");
 
-						map.addListener("click", (event) => {
-							const latLng = event.latLng;
-							console.info("Clicked location:", latLng);
+                    for (var i = 0; i < placemarks.length; i++) {
+                        var placemark = placemarks[i];
+                        var name = placemark.getElementsByTagName("name")[0].textContent;
 
-							if (google.maps.geometry.poly.containsLocation(latLng, boundaryPolygon)) {
-								handleMapClick(latLng);
-							} else {
-								alert("Markers can only be placed within Country Place!");
-							}
-						});
-					}
-				} else {
-					console.warn("Failed to load KML data:", xhr.statusText);
-				}
-			}
-		};
-		xhr.send();
+                        if (name === "Country Place") {
+                            // Load boundary polygon
+                            var coords = placemark.getElementsByTagName("coordinates")[0].textContent.trim().split(/[\s\n]+/);
+                            var boundaryCoords = [];
+                            coords.forEach(coord => {
+                                var latLng = coord.split(",");
+                                if (latLng.length >= 2) {
+                                    var lat = parseFloat(latLng[1]);
+                                    var lng = parseFloat(latLng[0]);
+                                    if (!isNaN(lat) && !isNaN(lng)) {
+                                        boundaryCoords.push({ lat: lat, lng: lng });
+                                    }
+                                }
+                            });
+                            createPolygon(boundaryCoords);
+                        } else if (name === "Houses") {
+                            // Load house markers
+                            var coordElements = placemark.getElementsByTagName("coordinates");
+                            for (var j = 0; j < coordElements.length; j++) {
+                                var coord = coordElements[j].textContent.trim().split(/[\s\n]+/)[0].split(",");
+                                if (coord.length >= 2) {
+                                    var lat = parseFloat(coord[1]);
+                                    var lng = parseFloat(coord[0]);
+                                    if (!isNaN(lat) && !isNaN(lng)) {
+                                        storeInFirestoreIfNotExists({ lat: lat, lng: lng }, 'red');
+                                    }
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    console.warn("Failed to load KML data:", xhr.statusText);
+                }
+            }
+        };
+        xhr.send();
+    }
 
-		map.setOptions({ disableDoubleClickZoom: true });
+    function createPolygon(paths) {
+        const polygon = new google.maps.Polygon({
+            paths: paths,
+            strokeColor: 'blue',
+            strokeOpacity: 0.8,
+            strokeWeight: 2,
+            fillOpacity: 0,
+            map: map
+        });
 
-		fetchFirestoreData();
-	}
+        return polygon;
+    }
 
-
-	function fetchFirestoreData() {
-		db.collection('addresses').get().then((querySnapshot) => {
-			if (querySnapshot.empty) {
-				console.log('No matching documents.');
-				return;
-			}
-			
-			querySnapshot.forEach((doc) => {
-				const point = doc.data();
-				if (point.lat && point.lng) {
-					const latLng = new google.maps.LatLng(point.lat, point.lng);
-					const circle = createCircle(latLng, point.status || 'yellow');
-					circles.push(circle);
-				}
-			});
-			console.log('Firestore data successfully fetched and rendered on the map.');
-		}).catch(error => {
-			console.error('Error fetching Firestore data:', error);
-		});
-	}
-
-
-    function createCircle(location, color) {
-        const newCircle = new google.maps.Circle({
+    function createCircle(latLng, color) {
+        console.log('Creating circle at:', latLng, 'with color:', color);
+        const circle = new google.maps.Circle({
             strokeColor: color,
             strokeOpacity: 0.8,
             strokeWeight: 2,
             fillColor: color,
             fillOpacity: 0.35,
             map: map,
-            center: location,
+            center: latLng,
             radius: 10
         });
 
-        let colorIndex = colors.indexOf(color);
+        circle.addListener('click', () => {
+            const newColor = circle.get('fillColor') === 'red' ? 'green' : 'red';
+            circle.setOptions({ fillColor: newColor, strokeColor: newColor });
 
+            updateFirestoreData(circle, newColor);
+        });
 
-		newCircle.addListener('click', () => {
-			if (colorIndex === 2) {
-				newCircle.setMap(null);
-				const index = circles.indexOf(newCircle);
-				circles.splice(index, 1);
-
-				// Remove the corresponding document from Firestore
-				const docRef = db.collection('addresses')
-								.doc(`${newCircle.getCenter().lat()}_${newCircle.getCenter().lng()}`); 
-				docRef.delete().then(() => {
-					console.log('Document successfully deleted.');
-				}).catch((error) => {
-					console.error('Error removing document:', error);
-				});
-
-			} else {
-				colorIndex++;
-				const newColor = colors[colorIndex];
-				newCircle.setOptions({ fillColor: newColor, strokeColor: newColor });
-			}
-
-			updateFirestoreData();
-		});
-
-        return newCircle;
+        return circle;
     }
 
-    function handleMapClick(location) {
-        const initialColor = 'yellow';
-        const newCircle = createCircle(location, initialColor);
-        circles.push(newCircle);
-        updateFirestoreData();
+    function storeInFirestoreIfNotExists(latLng, color) {
+        const docRef = db.collection('addresses').doc(`${latLng.lat}_${latLng.lng}`);
+        
+        docRef.get().then((docSnapshot) => {
+            if (!docSnapshot.exists) {
+                docRef.set({
+                    lat: latLng.lat,
+                    lng: latLng.lng,
+                    color: color
+                }).then(() => {
+                    console.log('Firestore data successfully stored:', { lat: latLng.lat, lng: latLng.lng, color: color });
+                }).catch(error => {
+                    console.error('Error storing Firestore data:', error);
+                });
+            }
+        }).catch(error => {
+            console.error('Error checking Firestore document existence:', error);
+        });
     }
-	
-	
-	function updateFirestoreData() {
-		const batch = db.batch();
-		circles.forEach(circle => {
-			const docRef = db.collection('addresses')
-							 .doc(`${circle.getCenter().lat()}_${circle.getCenter().lng()}`); 
-			batch.set(docRef, {
-				lat: circle.getCenter().lat(),
-				lng: circle.getCenter().lng(),
-				status: circle.get('fillColor') // updated to proper access to color
-			});
-		});
 
-		batch.commit().then(() => {
-			console.log('Firestore data successfully updated.');
-		}).catch(error => {
-			console.error('Error updating Firestore data:', error);
-		});
-	}
+    function updateFirestoreData(circle, newColor) {
+        const latLng = circle.getCenter();
+        const docRef = db.collection('addresses').doc(`${latLng.lat()}_${latLng.lng()}`);
+        
+        docRef.update({
+            color: newColor
+        }).then(() => {
+            console.log('Firestore data successfully updated:', { lat: latLng.lat(), lng: latLng.lng(), color: newColor });
+        }).catch(error => {
+            console.error('Error updating Firestore data:', error);
+        });
+    }
 
     window.onload = initMap;
 </script>
