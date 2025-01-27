@@ -74,14 +74,14 @@
 		});
 
 		const kmlLayer = new google.maps.KmlLayer({
-			url: 'https://raw.githubusercontent.com/pheltech/Recall/refs/heads/main/public/Country%20Place.kml?v=1',
+			url: 'https://raw.githubusercontent.com/pheltech/Recall/refs/heads/main/public/Country%20Place%20Recall.kml?v=1',
 			map: map,
 			clickable: false
 		});
 
 		// Load KML manually
 		var xhr = new XMLHttpRequest();
-		xhr.open("GET", "https://raw.githubusercontent.com/pheltech/Recall/refs/heads/main/public/Country%20Place.kml?v=1", true);
+		xhr.open("GET", "https://raw.githubusercontent.com/pheltech/Recall/refs/heads/main/public/Country%20Place%20Recall.kml?v=1", true);
 		xhr.onreadystatechange = function() {
 			if (xhr.readyState == 4) {
 				if (xhr.status == 200) {
