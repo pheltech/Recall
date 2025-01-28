@@ -30,7 +30,7 @@
         <p><span style="color: red;">&#9679;</span> Red - No record of contact for recall sheet</p>
     </div>
     <ul id="addressList"></ul>
-    
+
 <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-firestore.js"></script>
 <script>
@@ -45,10 +45,21 @@
     };
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore(); 
+    // Enable Firestore's offline persistence
+    firebase.firestore().enablePersistence()
+        .catch((err) => {
+            if (err.code === 'failed-precondition') {
+                console.log('Failed precondition error: Multiple tabs open, persistence can only be enabled in one tab.');
+            } else if (err.code === 'unimplemented') {
+                console.log('Unimplemented error: The current browser does not support all features required to enable persistence.');
+            }
+        });
 
     let map;
+    let infoWindow;
 
     function initMap() {
+        console.log('Initializing map');
         const neighborhoodBounds = {
             north: 28.1080,
             south: 28.0826,
@@ -65,7 +76,7 @@
 
         map = new google.maps.Map(document.getElementById('map'), {
             center: { lat: 28.095147, lng: -82.531077 },
-            zoom: 15,
+            zoom: 12,
             restriction: { latLngBounds: neighborhoodBounds, strictBounds: true },
             gestureHandling: 'greedy',
             styles: mapStyle
@@ -73,40 +84,45 @@
 
         map.setOptions({ disableDoubleClickZoom: true });
 
+        infoWindow = new google.maps.InfoWindow();
+
+        console.log('Loading KML properties');
         // Load KML file and separate layers
         loadKmlProperties();
 
+        console.log('Fetching Firestore data');
         // Fetch previously stored circles from Firestore
         fetchFirestoreData();
     }
+	
+	function fetchFirestoreData() {
+	  fetch('/api/addresses')
+		.then(response => response.json())
+		.then(markers => {
+		  console.log('Fetched from server:', markers);
+		  createMarkers(markers);
+		})
+		.catch(error => {
+		  console.error('Error fetching data from server:', error);
+		});
+	}
 
-    function fetchFirestoreData() {
-        db.collection('addresses').get().then((querySnapshot) => {
-            if (querySnapshot.empty) {
-                console.log('No matching documents.');
-                return;
-            }
-
-            querySnapshot.forEach((doc) => {
-                const point = doc.data();
-                console.log('Fetched from Firestore:', point);
-                if (point.lat && point.lng) {
-                    const latLng = new google.maps.LatLng(point.lat, point.lng);
-                    createCircle(latLng, point.color || 'red');
-                }
-            });
-            console.log('Firestore data successfully fetched and rendered on the map.');
-        }).catch(error => {
-            console.error('Error fetching Firestore data:', error);
-        });
-    }
-
+	function createMarkers(markers) {
+		console.log('Creating markers:', markers);
+		markers.forEach((marker) => {
+			const latLng = new google.maps.LatLng(marker.lat, marker.lng);
+			createCircle(latLng, marker.color);
+		});
+	}
+	
     function loadKmlProperties() {
+        console.log('Loading KML properties');
         var xhr = new XMLHttpRequest();
         xhr.open("GET", "https://raw.githubusercontent.com/pheltech/Recall/refs/heads/main/public/Country%20Place%20Recall.kml?v=1", true);
         xhr.onreadystatechange = function() {
             if (xhr.readyState == 4) {
                 if (xhr.status == 200) {
+                    console.log('KML data loaded successfully');
                     var parser = new DOMParser();
                     var xmlDoc = parser.parseFromString(xhr.responseText, "text/xml");
                     var placemarks = xmlDoc.getElementsByTagName("Placemark");
@@ -114,9 +130,11 @@
                     for (var i = 0; i < placemarks.length; i++) {
                         var placemark = placemarks[i];
                         var name = placemark.getElementsByTagName("name")[0].textContent;
+                        console.log('Processing placemark with name:', name);
 
                         if (name === "Country Place") {
                             // Load boundary polygon
+                            console.log('Loading boundary polygon');
                             var coords = placemark.getElementsByTagName("coordinates")[0].textContent.trim().split(/[\s\n]+/);
                             var boundaryCoords = [];
                             coords.forEach(coord => {
@@ -132,14 +150,17 @@
                             createPolygon(boundaryCoords);
                         } else if (name === "Houses") {
                             // Load house markers
+                            console.log('Loading house markers');
                             var coordElements = placemark.getElementsByTagName("coordinates");
+                            var address = placemark.getElementsByTagName("name")[0].textContent;
                             for (var j = 0; j < coordElements.length; j++) {
                                 var coord = coordElements[j].textContent.trim().split(/[\s\n]+/)[0].split(",");
                                 if (coord.length >= 2) {
                                     var lat = parseFloat(coord[1]);
                                     var lng = parseFloat(coord[0]);
                                     if (!isNaN(lat) && !isNaN(lng)) {
-                                        storeInFirestoreIfNotExists({ lat: lat, lng: lng }, 'red');
+                                        console.log('Storing to Firestore:', { lat: lat, lng: lng, address: address });
+                                        storeInFirestoreIfNotExists({ lat: lat, lng: lng, address: address }, 'red');
                                     }
                                 }
                             }
@@ -154,6 +175,7 @@
     }
 
     function createPolygon(paths) {
+        console.log('Creating polygon with paths:', paths);
         const polygon = new google.maps.Polygon({
             paths: paths,
             strokeColor: 'blue',
@@ -166,43 +188,59 @@
         return polygon;
     }
 
-    function createCircle(latLng, color) {
-        console.log('Creating circle at:', latLng, 'with color:', color);
-        const circle = new google.maps.Circle({
-            strokeColor: color,
-            strokeOpacity: 0.8,
-            strokeWeight: 2,
-            fillColor: color,
-            fillOpacity: 0.35,
-            map: map,
-            center: latLng,
-            radius: 10
-        });
+	function createCircle(latLng, color) {
+		console.log('Creating circle at:', latLng, 'with color:', color);
+		const circle = new google.maps.Circle({
+			strokeColor: color,
+			strokeOpacity: 0.8,
+			strokeWeight: 2,
+			fillColor: color,
+			fillOpacity: 0.35,
+			map: map,
+			center: latLng,
+			radius: 10
+		});
 
-        circle.addListener('click', () => {
-            const newColor = circle.get('fillColor') === 'red' ? 'green' : 'red';
-            circle.setOptions({ fillColor: newColor, strokeColor: newColor });
+		circle.addListener('mouseover', () => {
+			infoWindow.setContent(`${latLng}`);
+			infoWindow.setPosition(latLng);
+			infoWindow.open(map);
+		});
 
-            updateFirestoreData(circle, newColor);
-        });
+		circle.addListener('mouseout', () => {
+			infoWindow.close();
+		});
 
-        return circle;
-    }
+		circle.addListener('click', () => {
+			const newColor = circle.get('fillColor') === 'red' ? 'green' : 'red';
+			circle.setOptions({ fillColor: newColor, strokeColor: newColor });
 
-    function storeInFirestoreIfNotExists(latLng, color) {
-        const docRef = db.collection('addresses').doc(`${latLng.lat}_${latLng.lng}`);
+			updateFirestoreData(circle, newColor);
+		});
+
+		return circle;
+	}
+
+
+    function storeInFirestoreIfNotExists(data, color) {
+        console.log('Checking if document exists in Firestore for:', data);
+        const docRef = db.collection('addresses').doc(`${data.lat}_${data.lng}`);
         
         docRef.get().then((docSnapshot) => {
             if (!docSnapshot.exists) {
+                console.log('Document does not exist. Storing new document:', data);
                 docRef.set({
-                    lat: latLng.lat,
-                    lng: latLng.lng,
-                    color: color
+                    lat: data.lat,
+                    lng: data.lng,
+                    color: color,
+                    address: data.address
                 }).then(() => {
-                    console.log('Firestore data successfully stored:', { lat: latLng.lat, lng: latLng.lng, color: color });
+                    console.log('Firestore data successfully stored:', { lat: data.lat, lng: data.lng, color: color, address: data.address });
                 }).catch(error => {
                     console.error('Error storing Firestore data:', error);
                 });
+            } else {
+                console.log('Document already exists in Firestore:', data);
             }
         }).catch(error => {
             console.error('Error checking Firestore document existence:', error);
@@ -210,6 +248,7 @@
     }
 
     function updateFirestoreData(circle, newColor) {
+        console.log('Updating Firestore data for circle at:', circle.getCenter(), 'with new color:', newColor);
         const latLng = circle.getCenter();
         const docRef = db.collection('addresses').doc(`${latLng.lat()}_${latLng.lng()}`);
         
