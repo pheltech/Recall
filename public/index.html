@@ -96,18 +96,15 @@
 	}
 	
 	function fetchFirestoreData() {
-		fetch('/api/addresses')
-			.then(response => {
-				console.log('Server response:', response);
-				return response.json();
-			})
-			.then(markers => {
-				console.log('Fetched from server:', markers);
-				createMarkers(markers);
-			})
-			.catch(error => {
-				console.error('Error fetching data from server:', error);
-			});
+	  fetch('https://country-place-recall.herokuapp.com/api/addresses')
+		.then(response => response.json())
+		.then(markers => {
+		  console.log('Fetched from server:', markers);
+		  createMarkers(markers);
+		})
+		.catch(error => {
+		  console.error('Error fetching data from server:', error);
+		});
 	}
 
 	function createMarkers(markers) {
