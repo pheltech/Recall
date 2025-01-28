@@ -58,56 +58,56 @@
     let map;
     let infoWindow;
 
-    function initMap() {
-        console.log('Initializing map');
-        const neighborhoodBounds = {
-            north: 28.1080,
-            south: 28.0826,
-            east: -82.5189,
-            west: -82.5445,
-        };
+	function initMap() {
+		console.log('Initializing map');
+		const neighborhoodBounds = {
+			north: 28.1080,
+			south: 28.0826,
+			east: -82.5189,
+			west: -82.5445,
+		};
 
-        const mapStyle = [
-            { featureType: 'poi.business', stylers: [{ visibility: 'off' }] },
-            { featureType: 'poi.place_of_worship', stylers: [{ visibility: 'off' }] },
-            { featureType: 'poi.school', stylers: [{ visibility: 'off' }] },
-            { featureType: 'poi.medical', stylers: [{ visibility: 'off' }] }
-        ];
+		const mapStyle = [
+			{ featureType: 'poi.business', stylers: [{ visibility: 'off' }] },
+			{ featureType: 'poi.place_of_worship', stylers: [{ visibility: 'off' }] },
+			{ featureType: 'poi.school', stylers: [{ visibility: 'off' }] },
+			{ featureType: 'poi.medical', stylers: [{ visibility: 'off' }] }
+		];
 
-        map = new google.maps.Map(document.getElementById('map'), {
-            center: { lat: 28.095147, lng: -82.531077 },
-            zoom: 12,
-            restriction: { latLngBounds: neighborhoodBounds, strictBounds: true },
-            gestureHandling: 'greedy',
-            styles: mapStyle
-        });
+		map = new google.maps.Map(document.getElementById('map'), {
+			center: { lat: 28.095147, lng: -82.531077 },
+			zoom: 15,
+			restriction: { latLngBounds: neighborhoodBounds, strictBounds: true },
+			gestureHandling: 'greedy',
+			styles: mapStyle
+		});
 
-        map.setOptions({ disableDoubleClickZoom: true });
+		map.setOptions({ disableDoubleClickZoom: true });
 
-        infoWindow = new google.maps.InfoWindow();
+		infoWindow = new google.maps.InfoWindow();
 
-        console.log('Loading KML properties');
-        // Load KML file and separate layers
-        loadKmlProperties();
+		console.log('Loading KML properties');
+		// Load KML file and separate layers
+		loadKmlProperties();
 
-        console.log('Fetching Firestore data');
-        // Fetch previously stored circles from Firestore
-        fetchFirestoreData();
-    }
+		console.log('Fetching Firestore data');
+		// Fetch previously stored circles from Firestore
+		fetchFirestoreData();
+	}
 	
 	function fetchFirestoreData() {
-	  fetch('/api/addresses')
-		.then(response => {
-		  console.log('Server response:', response);
-		  return response.json();
-		})
-		.then(markers => {
-		  console.log('Fetched from server:', markers);
-		  createMarkers(markers);
-		})
-		.catch(error => {
-		  console.error('Error fetching data from server:', error);
-		});
+		fetch('/api/addresses')
+			.then(response => {
+				console.log('Server response:', response);
+				return response.json();
+			})
+			.then(markers => {
+				console.log('Fetched from server:', markers);
+				createMarkers(markers);
+			})
+			.catch(error => {
+				console.error('Error fetching data from server:', error);
+			});
 	}
 
 	function createMarkers(markers) {
