@@ -96,7 +96,7 @@
 	}
 	
 	function fetchFirestoreData() {
-	  fetch('http://localhost:3000/api/addresses')
+	  fetch('https://country-place-recall.herokuapp.com/api/addresses')
 		.then(response => response.json())
 		.then(markers => {
 		  console.log('Fetched from server:', markers);
